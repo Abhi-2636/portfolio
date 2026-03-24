@@ -3964,33 +3964,6 @@
         }
         animateCursor();
 
-        // ===== MATRIX DECIPHER EFFECT =====
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*";
-        function decipher(el) {
-            const originalText = el.innerText;
-            let iteration = 0;
-            let interval = setInterval(() => {
-                el.innerText = originalText.split("").map((letter, index) => {
-                    if(index < iteration) return originalText[index];
-                    return letters[Math.floor(Math.random() * 26)];
-                }).join("");
-                
-                if(iteration >= originalText.length) clearInterval(interval);
-                iteration += 1 / 3;
-            }, 30);
-        }
-
-        // Apply on load to hero
-        window.addEventListener('load', () => {
-            document.querySelectorAll('.hero-title span span, .section-badge').forEach(el => decipher(el));
-        });
-
-        // Apply on hover
-        document.querySelectorAll('h2, .section-badge, .nav-text').forEach(el => {
-            el.addEventListener('mouseenter', () => decipher(el));
-        });
-
-
         // Magnetic Effect
         const magneticElements = document.querySelectorAll('.magnetic');
         magneticElements.forEach(el => {
