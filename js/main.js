@@ -943,7 +943,7 @@ const projectData = {
         tags: ['Ionic', 'Mobile', 'Real Estate'],
         desc: 'A specialised student housing booking mobile application built with Ionic Framework. Provides a native-like experience with room browsing, online booking, payment gateway integration, and booking management.',
         features: ['Room Listing & Search', 'Online Booking System', 'Payment Integration', 'Real-Time Availability', 'Photo Gallery', 'User Reviews'],
-        liveUrl: 'https://abhishek263639.github.io/HEAVEN-ROOMS-/', year: '2023'
+        liveUrl: 'https://heaven-rooms-ionic-five.vercel.app/landing', year: '2023'
     },
     'explore-patna': {
         title: 'Explore Patna', color: '#818cf8',
