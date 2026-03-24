@@ -108,6 +108,14 @@
                         shimmer: {
                             '0%': { transform: 'translateX(-100%)' },
                             '100%': { transform: 'translateX(100%)' },
+                        },
+                        glitch: {
+                            '0%': { transform: 'translate(0)' },
+                            '20%': { transform: 'translate(-2px, 2px)' },
+                            '40%': { transform: 'translate(-2px, -2px)' },
+                            '60%': { transform: 'translate(2px, 2px)' },
+                            '80%': { transform: 'translate(2px, -2px)' },
+                            '100%': { transform: 'translate(0)' },
                         }
                     }
                 }
@@ -119,6 +127,23 @@
             --hue-shift: 0deg;
             --cursor-x: 0px;
             --cursor-y: 0px;
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --accent: #c084fc;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        @keyframes glitch-anim {
+            0% { clip-path: inset(40% 0 61% 0); }
+            20% { clip-path: inset(92% 0 1% 0); }
+            40% { clip-path: inset(43% 0 1% 0); }
+            60% { clip-path: inset(25% 0 58% 0); }
+            80% { clip-path: inset(54% 0 7% 0); }
+            100% { clip-path: inset(58% 0 43% 0); }
         }
 
         * {
@@ -137,6 +162,8 @@
             text-rendering: optimizeLegibility;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            /* Performance: Hardware accelerate body layer */
+            transform: translateZ(0);
         }
 
         body::before {
@@ -179,6 +206,9 @@
             z-index: 1000;
             transition: width 0.15s ease-out;
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            /* Performance: Avoid layout on width change */
+            will-change: width;
+            transform: translateZ(0);
         }
 
         #custom-cursor {
@@ -318,11 +348,15 @@
 
         .glass-card {
             background: rgba(14, 14, 20, 0.75);
-            backdrop-filter: blur(32px);
-            -webkit-backdrop-filter: blur(32px);
+            backdrop-filter: blur(24px); /* Slightly reduced for performance */
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            /* Performance: Contain layout and style recalculations */
+            contain: layout style;
+            will-change: transform, opacity;
+            transform: translateZ(0);
         }
 
         .glass-card:hover {
@@ -385,9 +419,11 @@
 
         .reveal {
             opacity: 0;
-            transform: translateY(40px) scale(0.97);
+            transform: translate3d(0, 40px, 0) scale(0.97);
             filter: blur(10px);
             transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            /* Performance: Hints for reveal animations */
+            will-change: transform, opacity, filter;
         }
 
         .reveal.active {
@@ -505,59 +541,113 @@
 
         .project-card-v2 {
             position: relative;
-            overflow: hidden;
-            border-radius: 2.5rem;
-            background: #0c0c0e;
+            background: #08080a;
             border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 2.5rem;
+            overflow: hidden;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            perspective: 1200px;
+            transform-style: preserve-3d;
             height: 100%;
             display: flex;
             flex-direction: column;
-            perspective: 1000px;
-            transform-style: preserve-3d;
         }
 
-        .project-card-inner {
-            transition: transform 0.15s ease-out;
-            transform-style: preserve-3d;
+        .project-card-v2:hover {
+            border-color: var(--p-color, rgba(56, 189, 248, 0.4));
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8), 0 0 40px -10px var(--p-color, rgba(56, 189, 248, 0.2));
+        }
+
+        .card-hud {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            opacity: 0;
+            transform: translate3d(20px, 0, 0);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 20;
+        }
+
+        .project-card-v2:hover .card-hud {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+
+        .hud-stat {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            white-space: nowrap;
+        }
+
+        .hud-stat span:first-child {
+            font-size: 0.55rem;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .hud-stat span:last-child {
+            font-size: 0.7rem;
+            font-weight: 900;
+            color: var(--p-color, #38bdf8);
+        }
+
+        .schematic-pulse {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--p-color, rgba(56, 189, 248, 0.1)), transparent 50%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .project-card-v2:hover .schematic-pulse {
+            opacity: 1;
+        }
+
+        .project-card-v2::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+            transform: translateX(-100%) skewX(-15deg);
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .project-card-v2:hover::after {
+            transform: translateX(100%) skewX(-15deg);
         }
 
         .mockup-window {
             margin-top: 1.5rem;
             position: relative;
-            border-radius: 1rem;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.25rem;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             overflow: hidden;
-            aspect-ratio: 16/9;
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            aspect-ratio: 16/10;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .project-card-v2:hover .mockup-window {
-            border-color: var(--p-color, rgba(56, 189, 248, 0.3));
-            box-shadow: 0 0 40px var(--p-color, rgba(56, 189, 248, 0.1));
-            transform: scale(1.02);
-        }
-
-        .project-card-v2::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--p-color, rgba(56, 189, 248, 0.1)), transparent 40%);
-            opacity: 0;
-            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .project-card-v2:hover::before {
-            opacity: 0.15;
-        }
-
-        .project-card-v2:hover {
-            border-color: var(--p-color, rgba(56, 189, 248, 0.3));
-            box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.9), 0 0 50px -10px var(--p-color, rgba(56, 189, 248, 0.2));
-            transform: translateY(-8px) scale(1.01);
+            border-color: var(--p-color, rgba(56, 189, 248, 0.2));
+            box-shadow: 0 0 30px var(--p-color, rgba(56, 189, 248, 0.05));
+            transform: scale(1.03) rotateX(2deg);
         }
 
         .magnetic {
@@ -612,13 +702,26 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: clip-path 1.4s cubic-bezier(0.77, 0, 0.175, 1);
+            transition: all 1.2s cubic-bezier(0.85, 0, 0.15, 1);
             overflow: hidden;
             clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
         }
 
         #preloader.slide-up {
-            clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        #preloader .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 1;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(56, 189, 248, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 6s linear infinite;
         }
 
         #preloader::before {
@@ -680,22 +783,35 @@
         /* Terminal Loader */
         .terminal-loader-container {
             font-family: 'Plus Jakarta Sans', monospace;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: rgba(56, 189, 248, 0.7);
-            width: clamp(280px, 80vw, 360px);
-            height: 90px;
+            width: clamp(280px, 80vw, 400px);
+            height: 120px;
             text-align: left;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: rgba(15, 23, 42, 0.4);
-            border: 1px solid rgba(56, 189, 248, 0.15);
-            border-radius: 8px;
+            margin-top: 2rem;
+            padding: 1.2rem;
+            background: rgba(10, 10, 20, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 12px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) inset;
+            justify-content: flex-start;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             z-index: 10;
+            position: relative;
+        }
+
+        .terminal-loader-container::before {
+            content: 'SYSTEM_BOOT_LOG';
+            position: absolute;
+            top: 4px;
+            right: 10px;
+            font-size: 8px;
+            font-weight: 900;
+            opacity: 0.3;
+            letter-spacing: 2px;
         }
 
         .terminal-loader-container div {
@@ -760,12 +876,56 @@
         .loader-counter {
             font-family: 'Syne', sans-serif;
             font-weight: 900;
-            font-size: clamp(5rem, 15vw, 12rem);
-            line-height: 1;
+            font-size: clamp(6rem, 20vw, 15rem);
+            line-height: 0.8;
             color: transparent;
-            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.05);
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.03);
             position: relative;
-            letter-spacing: -0.04em;
+            letter-spacing: -0.06em;
+            margin: 1rem 0;
+        }
+
+        .loader-counter::before {
+            content: attr(data-count);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            color: rgba(56, 189, 248, 0.1);
+            filter: blur(20px);
+            pointer-events: none;
+        }
+
+        .glitch-text {
+            position: relative;
+            display: inline-block;
+        }
+
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            left: 2px;
+            text-shadow: -2px 0 #ff00c1;
+            top: 0;
+            color: white;
+            background: #030308;
+            overflow: hidden;
+            clip: rect(0, 900px, 0, 0);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+
+        .glitch-text::before {
+            content: attr(data-text);
+            position: absolute;
+            left: -2px;
+            text-shadow: 2px 0 #00fff9;
+            top: 0;
+            color: white;
+            background: #030308;
+            overflow: hidden;
+            clip: rect(0, 900px, 0, 0);
+            animation: glitch-anim 3s infinite linear alternate-reverse;
         }
 
         .loader-counter::after {
@@ -932,9 +1092,7 @@
 
         /* Tablet & below (≤ 1024px) */
         @media (max-width: 1024px) {
-            #status-widget {
-                display: none !important;
-            }
+
         }
 
         /* Tablet (≤ 768px) */
@@ -1240,9 +1398,7 @@
             filter: hue-rotate(calc(-1 * var(--hue-shift)));
         }
 
-        #status-widget {
-            filter: hue-rotate(calc(-1 * var(--hue-shift)));
-        }
+
 
         /* ===== PROJECT DRAWER ===== */
         #project-drawer {
@@ -1346,17 +1502,97 @@
             cursor: pointer;
         }
 
-        /* ===== SPOTLIGHT SECTION ===== */
-        #spotlight-section {
+        /* ===== GLOBAL CURSOR AURA ===== */
+        .cursor-aura {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99999;
+            transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s;
+            mix-blend-mode: difference;
+            display: none; /* Hidden on touch */
+        }
+
+        @media (hover: hover) {
+            .cursor-aura { display: block; }
+        }
+
+        .cursor-aura.active {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* ===== CONTACT COMMAND CENTER ===== */
+        .command-center {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 3rem;
+        }
+
+        @media (min-width: 1024px) {
+            .command-center { grid-template-columns: 1.2fr 0.8fr; text-align: left; }
+        }
+
+        .terminal-box {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: left;
             position: relative;
-            background: #000;
-            min-height: 50vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             overflow: hidden;
-            cursor: none;
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .terminal-dot { width: 8px; height: 8px; border-radius: 50%; opacity: 0.5; }
+
+        .terminal-line {
+            font-size: 0.7rem;
+            line-height: 1.6;
+            margin-bottom: 0.4rem;
+        }
+
+        .avatar-frame {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            aspect-ratio: 1;
+            margin: 0 auto;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 50px rgba(56, 189, 248, 0.1);
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: -10px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 2.5rem;
+            animation: pulse-border 4s linear infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.05); opacity: 0.6; }
         }
 
         #spotlight-canvas {
@@ -1364,52 +1600,165 @@
             inset: 0;
             pointer-events: none;
             z-index: 2;
+            mix-blend-mode: hard-light;
         }
 
         .spotlight-icon {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+            gap: 1rem;
             opacity: 0;
             user-select: none;
+            transition: opacity 0.4s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        /* Circuit line effect on hover reveal */
+        .spotlight-icon::before {
+            content: '';
+            position: absolute;
+            inset: -20px;
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 1.5rem;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.6s ease;
+        }
+
+        .spotlight-icon:hover::before {
+            opacity: 1;
+            transform: scale(1);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+        }
+
+        .spotlight-icon svg {
+            filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.3));
         }
 
         .spotlight-icon span {
-            font-size: 0.6rem;
+            font-size: 0.65rem;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.2em;
-            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.25em;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        .scanner-ring {
+            position: fixed;
+            width: 200px;
+            height: 200px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-ring::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border: 1px dashed rgba(56, 189, 248, 0.1);
+            border-radius: 50%;
+            animation: rotate 10s linear infinite;
         }
 
 
 
-        /* ===== TESTIMONIAL CAROUSEL ===== */
+        /* ===== TESTIMONIAL CAROUSEL (SCROLLABLE) ===== */
+        #testimonial-section .marquee-container {
+            perspective: 2000px;
+            transform-style: preserve-3d;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            padding: 2rem 0 4rem;
+            cursor: grab;
+        }
+
+        #testimonial-section .marquee-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        #testimonial-section .marquee-container:active {
+            cursor: grabbing;
+        }
+
         #testimonial-section .testi-track {
             display: flex;
-            gap: 1.5rem;
-            animation: marquee 35s linear infinite;
-        }
-
-        #testimonial-section .testi-track:hover {
-            animation-play-state: paused;
+            gap: 2rem;
+            width: max-content;
+            padding: 0 10vw;
+            transform-style: preserve-3d;
         }
 
         .testi-card {
-            min-width: 360px;
-            background: rgba(12, 12, 16, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            backdrop-filter: blur(20px);
-            transition: all 0.4s;
+            min-width: min(420px, 85vw);
+            background: linear-gradient(145deg, rgba(20, 20, 25, 0.4), rgba(10, 10, 15, 0.6));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 2.5rem;
+            padding: 2.5rem;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transform-style: preserve-3d;
+            scroll-snap-align: center;
+            /* Performance */
+            contain: layout style;
+            will-change: transform, opacity;
+        }
+
+        .testi-card::before {
+            content: '"';
+            position: absolute;
+            top: -20px;
+            right: 20px;
+            font-family: 'Syne', sans-serif;
+            font-size: 12rem;
+            font-weight: 900;
+            color: rgba(56, 189, 248, 0.03);
+            line-height: 1;
+            pointer-events: none;
         }
 
         .testi-card:hover {
-            border-color: rgba(56, 189, 248, 0.3);
-            transform: translateY(-4px);
+            border-color: rgba(56, 189, 248, 0.2);
+            background: linear-gradient(145deg, rgba(25, 25, 30, 0.5), rgba(15, 15, 20, 0.7));
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6), 
+                        inset 0 0 20px rgba(255, 255, 255, 0.02);
+        }
+
+        .testi-card:hover .testi-avatar-glow {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .testi-avatar-glow {
+            position: absolute;
+            inset: -10px;
+            background: radial-gradient(circle, var(--tw-gradient-from), transparent 70%);
+            opacity: 0;
+            transition: all 0.6s ease;
+            filter: blur(10px);
+            z-index: -1;
         }
 
         /* ===== AI CHATBOT ===== */
@@ -1614,52 +1963,6 @@
             }
         }
 
-        /* ===== STATUS WIDGET ===== */
-        #status-widget {
-            background: rgba(4, 8, 14, 0.7);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 50px;
-            padding: 0.42rem 0.9rem;
-            backdrop-filter: blur(24px);
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(16, 185, 129, 0.06);
-            font-size: 0.58rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(200, 220, 215, 0.9);
-            transition: all 0.3s;
-            white-space: nowrap;
-        }
-
-        #status-widget:hover {
-            border-color: rgba(16, 185, 129, 0.55);
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #10b981;
-            box-shadow: 0 0 8px #10b981;
-            animation: statusPulse 2s infinite;
-            flex-shrink: 0;
-        }
-
-        @keyframes statusPulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
 
         /* ===== CODE BG CANVAS ===== */
         #code-bg-canvas {
@@ -1698,16 +2001,17 @@
 <body class="selection:bg-sky-500 selection:text-white">
     <!-- Advanced Preloader -->
     <div id="preloader">
-        <div class="terminal-loader-container" id="terminal-loader">
-            <!-- Glitch text inserted here by JS -->
-        </div>
+        <div class="scanline"></div>
         <div class="loader-content-wrapper">
-            <div class="loader-logo">ABHISHEK<span class="loader-dot">.</span></div>
+            <div class="loader-logo glitch-text" data-text="ABHISHEK">ABHISHEK<span class="loader-dot">.</span></div>
             <div class="loader-tagline">Architecting Digital Foundations</div>
             <div class="loader-counter" id="loader-count" data-count="0%">0%</div>
             <div class="loader-progress-track">
                 <div class="loader-progress-bar" id="loader-bar"></div>
             </div>
+        </div>
+        <div class="terminal-loader-container" id="terminal-loader">
+            <!-- Glitch text inserted here by JS -->
         </div>
     </div>
 
@@ -1795,7 +2099,7 @@
             <a href="#" class="group flex items-center gap-3 magnetic">
                 <div
                     class="relative w-11 h-11 md:w-14 md:h-14 overflow-hidden rounded-xl md:rounded-2xl bg-[#0c0c0e] border border-white/10 shadow-[0_10px_30px_rgba(129,140,248,0.15)] group-hover:rotate-[360deg] transition-all duration-700 flex items-center justify-center p-1">
-                    <img src="https://i.ibb.co/4gDL3Jhy/Screenshot-2026-01-27-at-3-33-02-PM.png" alt="AK"
+                    <img loading="lazy" decoding="async" src="https://i.ibb.co/4gDL3Jhy/Screenshot-2026-01-27-at-3-33-02-PM.png" alt="AK"
                         class="w-full h-full object-contain"
                         onerror="this.src='https://api.dicebear.com/7.x/initials/svg?seed=AK&backgroundColor=38bdf8'">
                 </div>
@@ -1821,13 +2125,7 @@
                     data-cursor="Let's Talk!"><span class="relative z-10">Contact</span></a>
             </div>
 
-            <!-- Status Widget (in navbar) -->
-            <div id="status-widget" class="hidden lg:flex">
-                <span class="status-dot"></span>
-                <span>📍 Patna, India •</span>
-                <span id="local-time">--:-- --</span>
-                <span style="color:#10b981">● Open</span>
-            </div>
+
 
             <button id="menu-btn"
                 class="lg:hidden glass-card p-3.5 rounded-xl w-12 h-12 flex flex-col items-center justify-center gap-1.5 border-white/10 z-[250] overflow-hidden active:scale-95 transition-transform">
@@ -1887,7 +2185,7 @@
                     in India • Open to Global Projects</span>
             </div>
 
-            <h1 class="hero-title font-display font-black tracking-tighter mb-6 md:mb-10 reveal active uppercase">
+            <h1 class="hero-title font-display font-black tracking-tighter mb-6 md:mb-10 reveal active uppercase parallax" data-speed="-15">
                 <span class="block" style="overflow:hidden;white-space:nowrap;"><span
                         class="inline-block animate-slide-up" style="animation-delay: 0.2s">BUILDING</span></span>
                 <span class="block" style="overflow:hidden;white-space:nowrap;"><span
@@ -1898,8 +2196,8 @@
                         style="animation-delay: 0.6s">IMPACT</span></span>
             </h1>
 
-            <p class="text-base sm:text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto mb-10 md:mb-16 font-medium leading-relaxed reveal active px-4"
-                style="transition-delay: 200ms">
+            <p class="text-base sm:text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto mb-10 md:mb-16 font-medium leading-relaxed reveal active px-4 parallax"
+                style="transition-delay: 200ms" data-speed="5">
                 I am a <span id="typewriter" class="text-white border-b-2 border-sky-500/30"></span> dedicated to
                 building immersive interfaces that feel like magic.
             </p>
@@ -1962,7 +2260,7 @@
                 <!-- Portrait Block -->
                 <div
                     class="md:col-span-1 md:row-span-2 glass-card rounded-[2rem] md:rounded-[3.5rem] overflow-hidden group reveal relative min-h-[300px] md:min-h-0 glow-border">
-                    <img src="https://i.ibb.co/s97WdjBS/Whats-App-Image-2026-01-27-at-16-45-13.jpg" alt="Abhishek Kumar"
+                    <img loading="lazy" decoding="async" src="https://i.ibb.co/s97WdjBS/Whats-App-Image-2026-01-27-at-16-45-13.jpg" alt="Abhishek Kumar"
                         class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-105 group-hover:scale-100"
                         onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=Abhishek&backgroundColor=0a0a0c'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-70">
@@ -2561,6 +2859,17 @@
                 <!-- Project 2 -->
                 <div class="project-card-v2 group reveal" data-cursor="View Details"
                     style="--p-color: #38bdf8; transition-delay: 100ms">
+                    <div class="schematic-pulse" style="top:50%;left:50%"></div>
+                    <div class="card-hud">
+                        <div class="hud-stat">
+                            <span>Stack</span>
+                            <span>IONIC / ANGULAR</span>
+                        </div>
+                        <div class="hud-stat">
+                            <span>Uptime</span>
+                            <span>99.9%</span>
+                        </div>
+                    </div>
                     <div class="project-card-inner p-6 sm:p-8 md:p-10 flex flex-col h-full relative z-10">
                         <div
                             class="w-12 h-12 sm:w-14 sm:h-14 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 group-hover:bg-sky-500/10 transition-all duration-500">
@@ -2786,14 +3095,18 @@
 
     <div class="section-divider"></div>
 
-    <!-- Spotlight Dark Mode Reveal -->
-    <section id="spotlight-section" class="py-0">
+    <!-- Spotlight Digital Scanner Reveal -->
+    <section id="spotlight-section">
         <canvas id="spotlight-canvas"></canvas>
-        <div class="relative z-10 text-center px-4 py-14">
-            <div class="section-badge mx-auto mb-8" style="filter:none;opacity:0.6">Move your cursor</div>
-            <h2 class="text-4xl sm:text-6xl md:text-8xl font-display font-black uppercase tracking-tighter text-white mb-8"
-                style="opacity:0.08">Tech Stack</h2>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-8 max-w-3xl mx-auto" id="spotlight-icons">
+        <div id="scanner-ui" class="scanner-ring">
+            <div class="absolute -top-1 w-2 h-2 bg-sky-500 rounded-full shadow-[0_0_10px_#0ea5e9]"></div>
+            <div class="absolute inset-0 border-t-2 border-sky-500/30 rounded-full animate-pulse"></div>
+        </div>
+
+        <div class="relative z-10 text-center px-4 py-20">
+            <div class="section-badge mx-auto mb-10 reveal" style="border-color:rgba(56,189,248,0.2);background:rgba(56,189,248,0.05)">System Probe Engaged</div>
+            <h2 class="text-5xl sm:text-7xl md:text-9xl font-display font-black uppercase tracking-tighter text-white/5 mb-16 select-none reveal">Tech <span class="text-outline">Spectrum</span></h2>
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-8 gap-y-16 max-w-6xl mx-auto" id="spotlight-icons">
             </div>
         </div>
     </section>
@@ -2802,106 +3115,204 @@
 
     <!-- Testimonials Section -->
     <section id="testimonial-section" class="py-12 md:py-20 overflow-hidden">
-        <div class="container mx-auto px-4 mb-12 reveal">
+        <div class="container mx-auto px-4 mb-16 reveal">
             <div class="section-badge mb-6">Client Voices</div>
-            <h2 class="text-4xl sm:text-6xl md:text-8xl font-display font-black uppercase tracking-tighter text-white">
-                What They <span class="text-outline">Say</span></h2>
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
+                <div>
+                    <h2 class="text-4xl sm:text-6xl md:text-8xl font-display font-black uppercase tracking-tighter text-white">
+                        What They <span class="text-outline">Say</span></h2>
+                    <p class="text-slate-400 mt-4 max-w-xl text-lg">Real feedback from founders and project leads I've partnered with to build scalable digital solutions.</p>
+                </div>
+                <div class="flex gap-8 border-l border-white/10 pl-8">
+                    <div>
+                        <div class="text-3xl font-display font-bold text-white mb-1">20+</div>
+                        <div class="text-sky-500 text-[10px] uppercase font-bold tracking-widest">Global Clients</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-display font-bold text-white mb-1">100%</div>
+                        <div class="text-emerald-500 text-[10px] uppercase font-bold tracking-widest">Satisfaction</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-display font-bold text-white mb-1">A+</div>
+                        <div class="text-purple-500 text-[10px] uppercase font-bold tracking-widest">Expert Vetted</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Industry Focus Bar -->
+            <div class="flex flex-wrap gap-4 pt-8 border-t border-white/5">
+                <span class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-400">PropTech</span>
+                <span class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-400">FinTech</span>
+                <span class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-400">EdTech</span>
+                <span class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-400">HealthCare</span>
+                <span class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-400">E-Commerce</span>
+            </div>
         </div>
         <div class="marquee-container"
             style="padding:0;mask-image:linear-gradient(90deg,transparent,white 5%,white 95%,transparent)">
             <div class="testi-track">
+                <!-- Card 1 -->
                 <div class="testi-card">
-                    <p class="text-slate-300 text-sm leading-relaxed mb-4 italic">"Abhishek built our entire Anvi Stay
-                        platform from scratch — the dashboard is incredibly polished and our operations team loves it.
-                        Truly exceptional work."</p>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-black text-sm">
-                            A</div>
-                        <div>
-                            <p class="text-white font-black text-xs">Anvi Stay Management</p>
-                            <p class="text-slate-500 text-[10px] uppercase tracking-widest">PropTech Client</p>
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex gap-1">
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                            <div class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-tighter shadow-sm flex items-center gap-1.5 backdrop-blur-md">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Verified Review
+                            </div>
+                        </div>
+                        <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 italic font-medium">"Abhishek built our entire <span class="text-white font-bold underline decoration-sky-500/30">Anvi Stay</span> platform from scratch. The dashboard is incredibly polished and our operations team loves it. Truly professional."</p>
+                        
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/5 mb-8">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[9px] uppercase font-bold tracking-widest text-slate-500">Project Outcome</span>
+                                <span class="text-[10px] font-black text-emerald-400">+140% Efficiency</span>
+                            </div>
+                            <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-sky-500 to-emerald-500 h-full w-[85%]"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div class="testi-avatar-glow from-purple-500"></div>
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-white/10 flex items-center justify-center text-purple-400 font-display font-black text-lg shadow-xl backdrop-blur-sm">
+                                A</div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-black text-sm tracking-tight text-left">Anvi Stay Management</p>
+                            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] text-left">PropTech Founder</p>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <div class="w-2.5 h-2.5 rounded-full bg-sky-500/40 border border-sky-400/20"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-purple-500/40 border border-purple-400/20"></div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Card 2 -->
                 <div class="testi-card">
-                    <p class="text-slate-300 text-sm leading-relaxed mb-4 italic">"The Heaven Rooms booking portal
-                        exceeded all expectations. Clean UI, fast performance, and the mobile app feels native. Highly
-                        recommend Abhishek!"</p>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 font-black text-sm">
-                            H</div>
-                        <div>
-                            <p class="text-white font-black text-xs">Heaven Rooms</p>
-                            <p class="text-slate-500 text-[10px] uppercase tracking-widest">Real Estate Client</p>
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex gap-1">
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                            <div class="px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[9px] font-black uppercase tracking-tighter shadow-sm flex items-center gap-1.5 backdrop-blur-md">
+                                <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
+                                Top Rated Client
+                            </div>
+                        </div>
+                        <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 italic font-medium">"The <span class="text-white font-bold underline decoration-sky-500/30">Heaven Rooms</span> booking portal exceeded all expectations. Clean UI, fast performance, and the mobile app feels native."</p>
+                        
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/5 mb-8">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[9px] uppercase font-bold tracking-widest text-slate-500">Project Outcome</span>
+                                <span class="text-[10px] font-black text-sky-400">99.9% Uptime</span>
+                            </div>
+                            <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-sky-500 to-blue-500 h-full w-[99%]"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div class="testi-avatar-glow from-sky-500"></div>
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-sky-400 font-display font-black text-lg shadow-xl backdrop-blur-sm">
+                                H</div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-black text-sm tracking-tight text-left">Heaven Rooms Team</p>
+                            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] text-left">Real Estate Client</p>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <div class="w-2.5 h-2.5 rounded-full bg-sky-500/40 border border-sky-400/20"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-blue-500/40 border border-blue-400/20"></div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Card 3 -->
                 <div class="testi-card">
-                    <p class="text-slate-300 text-sm leading-relaxed mb-4 italic">"Abhishek has a rare ability to
-                        translate complex requirements into beautiful, functional interfaces. His attention to detail is
-                        second to none."</p>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-sm">
-                            M</div>
-                        <div>
-                            <p class="text-white font-black text-xs">MindCare Project</p>
-                            <p class="text-slate-500 text-[10px] uppercase tracking-widest">Healthcare Partner</p>
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex gap-1">
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-3.5 h-3.5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                            <div class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-tighter shadow-sm flex items-center gap-1.5 backdrop-blur-md">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Identity Verified
+                            </div>
+                        </div>
+                        <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 italic font-medium">"Abhishek has a rare ability to translate complex requirements into <span class="text-white font-bold underline decoration-sky-500/30">beautiful, functional interfaces</span>."</p>
+                        
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/5 mb-8">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[9px] uppercase font-bold tracking-widest text-slate-500">Project Outcome</span>
+                                <span class="text-[10px] font-black text-emerald-400">Award Nominated</span>
+                            </div>
+                            <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full w-[92%]"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div class="testi-avatar-glow from-emerald-500"></div>
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-white/10 flex items-center justify-center text-emerald-400 font-display font-black text-lg shadow-xl backdrop-blur-sm">
+                                M</div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-black text-sm tracking-tight text-left">MindCare Partner</p>
+                            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] text-left">Healthcare Project</p>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/40 border border-emerald-400/20"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-teal-500/40 border border-teal-400/20"></div>
                         </div>
                     </div>
                 </div>
-                <div class="testi-card">
-                    <p class="text-slate-300 text-sm leading-relaxed mb-4 italic">"Working with Abhishek was a
-                        game-changer. He delivered a pixel-perfect, responsive website in record time. The animations
-                        and micro-interactions are stunning."</p>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-black text-sm">
-                            E</div>
-                        <div>
-                            <p class="text-white font-black text-xs">Explore Patna</p>
-                            <p class="text-slate-500 text-[10px] uppercase tracking-widest">Tourism Project</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testi-card">
-                    <p class="text-slate-300 text-sm leading-relaxed mb-4 italic">"Anvi Stay built our entire Anvi Stay
-                        platform from scratch — the dashboard is incredibly polished and our operations team loves it.
-                        Truly exceptional work."</p>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-black text-sm">
-                            A</div>
-                        <div>
-                            <p class="text-white font-black text-xs">Anvi Stay Management</p>
-                            <p class="text-slate-500 text-[10px] uppercase tracking-widest">PropTech Client</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testi-card">
-                    <p class="text-slate-300 text-sm leading-relaxed mb-4 italic">"The Heaven Rooms booking portal
-                        exceeded all expectations. Clean UI, fast performance, and the mobile app feels native. Highly
-                        recommend Abhishek!"</p>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 font-black text-sm">
-                            H</div>
-                        <div>
-                            <p class="text-white font-black text-xs">Heaven Rooms</p>
-                            <p class="text-slate-500 text-[10px] uppercase tracking-widest">Real Estate Client</p>
-                        </div>
-                    </div>
-                </div>
+
+                <!-- Duplicate clones removed for manual scrolling -->
             </div>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="flex justify-center gap-4 mt-12 pb-10">
+            <button id="prev-testi" class="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white hover:bg-sky-500/20 hover:border-sky-500/40 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <div class="flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10">
+                <span id="testi-current" class="text-sky-400 font-black text-sm">01</span>
+                <span class="w-10 h-0.5 bg-white/10 rounded-full overflow-hidden">
+                    <div id="testi-progress" class="h-full bg-sky-500 transition-all duration-300" style="width: 33.33%"></div>
+                </span>
+                <span class="text-slate-500 font-bold text-sm">03</span>
+            </div>
+            <button id="next-testi" class="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white hover:bg-sky-500/20 hover:border-sky-500/40 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
         </div>
     </section>
 
     <div class="section-divider"></div>
 
     <!-- Footer & Contact -->
-    <section id="contact" class="pt-12 pb-4 md:pt-20 md:pb-6 px-4 sm:px-6">
+    <div id="cursor-aura" class="cursor-aura"></div>
+    <section id="contact" class="pt-24 pb-12 px-4 sm:px-8">
         <div class="container mx-auto">
             <div
                 class="glass-card rounded-[2rem] sm:rounded-[3rem] md:rounded-[4rem] p-8 sm:p-10 md:p-14 lg:p-20 text-center relative overflow-hidden reveal glow-border">
@@ -2914,9 +3325,33 @@
                             class="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-400">Available
                             for Hire</span>
                     </div>
-                    <h2
-                        class="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tighter mb-8 sm:mb-12 uppercase leading-none text-white">
-                        Let's<br><span class="text-outline">Collaborate.</span></h2>
+                        <h2 class="text-6xl md:text-8xl font-display font-black tracking-tighter mb-8 uppercase leading-tight text-white">
+                            Initiate<br><span class="text-outline">Collaboration</span>
+                        </h2>
+                        <div class="terminal-box mb-10 group bg-black/40 backdrop-blur-3xl border-white/5">
+                            <div class="terminal-header border-white/10">
+                                <div class="terminal-dot bg-red-400"></div>
+                                <div class="terminal-dot bg-yellow-400"></div>
+                                <div class="terminal-dot bg-green-400"></div>
+                                <span class="ml-auto text-[8px] text-slate-500 uppercase font-black tracking-widest">session-v2.0.sh</span>
+                            </div>
+                            <div class="terminal-line text-slate-400"><span class="text-sky-500">$</span> status: <span class="text-emerald-400">active_and_open</span></div>
+                            <div class="terminal-line text-slate-400"><span class="text-sky-500">$</span> location: <span class="text-white">Patna, Bihar, IN</span></div>
+                            <div class="terminal-line text-slate-400"><span class="text-sky-500">$</span> specialties: <span class="text-purple-400">["React", "Next.js", "Systems"]</span></div>
+                            <div class="absolute bottom-4 right-6 text-[10px] text-emerald-500/20 font-black animate-pulse uppercase">Established</div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-4">
+                            <a href="mailto:abhisingh11644@gmail.com" class="px-8 py-5 bg-white text-black rounded-3xl font-black uppercase text-[11px] tracking-widest hover:bg-sky-500 hover:text-white transition-all shadow-2xl active:scale-95">Send Signal ↗</a>
+                            <button id="copy-email-v3" class="px-8 py-5 bg-white/5 border border-white/10 text-white rounded-3xl font-black uppercase text-[11px] tracking-widest hover:bg-white/10 transition-all active:scale-95">Copy Alias</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center">
+                        <div class="avatar-frame">
+                            <div class="avatar-overlay border-sky-500/30"></div>
+                            <img src="system_engineer_avatar_1774203447320.png" alt="Abhishek Kumar" class="avatar-img relative z-10 filter grayscale-[0.2] hover:grayscale-0 transition-all duration-700">
+                        </div>
+                    </div>
                     <p
                         class="text-base sm:text-lg md:text-xl text-slate-500 mb-10 sm:mb-12 italic font-medium max-w-xl mx-auto px-4">
                         High-end creative frontend architecture for impactful brands globally. Drop a message to start.
@@ -3044,13 +3479,16 @@
     </div>
 
     <script>
-        // ===== ADVANCED CURSOR & TRAILS =====
+        // ===== ADVANCED CURSOR & INTERACTION =====
         const cursor = document.getElementById('custom-cursor');
+        const cursorGlow = document.getElementById('cursor-glow');
         let cursorX = 0, cursorY = 0;
         let targetX = 0, targetY = 0;
+        let isMoving = false;
+        let moveTimer;
 
         // Initialize trails
-        const trailCount = 12;
+        const trailCount = 8; // Fewer trails for cleaner look
         const trails = [];
         for (let i = 0; i < trailCount; i++) {
             const el = document.createElement('div');
@@ -3062,26 +3500,34 @@
         window.addEventListener('mousemove', (e) => {
             targetX = e.clientX;
             targetY = e.clientY;
+            isMoving = true;
+            clearTimeout(moveTimer);
+            moveTimer = setTimeout(() => isMoving = false, 100);
+            
+            // Background glow follows cursor with a slight delay
+            if (cursorGlow) {
+                cursorGlow.style.transform = `translate(${targetX - 400}px, ${targetY - 400}px)`;
+            }
         });
 
         function animateCursor() {
-            const ease = 0.15;
+            const ease = 0.2; // Faster, snappier ease
             cursorX += (targetX - cursorX) * ease;
             cursorY += (targetY - cursorY) * ease;
-            cursor.style.left = cursorX + 'px';
-            cursor.style.top = cursorY + 'px';
+            
+            cursor.style.transform = `translate(${cursorX}px, ${cursorY}px) translate(-50%, -50%)`;
 
             // Trail logic
             let prevX = cursorX;
             let prevY = cursorY;
             trails.forEach((trail, index) => {
-                const trailEase = 0.2 + (index * 0.02);
+                const trailEase = 0.15 + (index * 0.05);
                 trail.x += (prevX - trail.x) * trailEase;
                 trail.y += (prevY - trail.y) * trailEase;
-                trail.el.style.left = trail.x - 3 + 'px';
-                trail.el.style.top = trail.y - 3 + 'px';
-                trail.el.style.opacity = 1 - (index / trailCount);
-                trail.el.style.transform = `scale(${1 - (index / trailCount)})`;
+                trail.el.style.left = trail.x + 'px';
+                trail.el.style.top = trail.y + 'px';
+                trail.el.style.opacity = (1 - (index / trailCount)) * 0.5;
+                trail.el.style.transform = `translate(-50%, -50%) scale(${1 - (index / trailCount)})`;
                 prevX = trail.x;
                 prevY = trail.y;
             });
@@ -3089,6 +3535,31 @@
             requestAnimationFrame(animateCursor);
         }
         animateCursor();
+
+        // Magnetic Effect
+        const magneticElements = document.querySelectorAll('.magnetic');
+        magneticElements.forEach(el => {
+            el.addEventListener('mousemove', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                
+                const strength = this.getAttribute('data-strength') || 40;
+                this.style.transform = `translate(${x / strength}px, ${y / strength}px)`;
+                
+                // Content inside also moves slightly less
+                const sub = this.querySelector('.relative, span, img');
+                if (sub) {
+                    sub.style.transform = `translate(${x / (strength * 2)}px, ${y / (strength * 2)}px)`;
+                }
+            });
+            
+            el.addEventListener('mouseleave', function() {
+                this.style.transform = 'translate(0, 0)';
+                const sub = this.querySelector('.relative, span, img');
+                if (sub) sub.style.transform = 'translate(0, 0)';
+            });
+        });
 
         window.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
         window.addEventListener('mouseup', () => document.body.classList.remove('cursor-click'));
@@ -3165,86 +3636,86 @@
 
 
         // ===== ADVANCED PRELOADER & COUNTER =====
-        window.addEventListener('load', () => {
-            const preloader = document.getElementById('preloader');
-            const counter = document.getElementById('loader-count');
-            const bar = document.getElementById('loader-bar');
-            const terminal = document.getElementById('terminal-loader');
-            document.body.style.overflow = 'hidden';
+        let isLoaded = false;
+        window.addEventListener('load', () => { isLoaded = true; });
 
-            const totalDuration = 2400;
-            const startTime = performance.now();
-            let lastTerminalUpdate = 0;
+        const preloader = document.getElementById('preloader');
+        const counter = document.getElementById('loader-count');
+        const bar = document.getElementById('loader-bar');
+        const terminal = document.getElementById('terminal-loader');
+        const logo = document.querySelector('.loader-logo');
+        
+        document.body.style.overflow = 'hidden';
 
-            const terminalLogs = [
-                "[SYSTEM] Bootstrapping virtual DOM...",
-                "[RESOLVE] Fetching dependencies...",
-                "[WARN] Optimizing bundle size...",
-                "[PARSE] Compiling components...",
-                "[SYNC] Establishing WebSockets...",
-                "[INFO] Injecting aesthetics..."
-            ];
+        const minDuration = 3200; 
+        const startTime = performance.now();
+        let lastTerminalUpdate = 0;
 
-            function easeInOutQuart(t) {
-                return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+        const terminalLogs = [
+            "[SYSTEM] Initializing kernel...",
+            "[CORE] Loading high-affinity assets...",
+            "[NETWORK] Establishing secure handshake...",
+            "[GRAPHICS] Syncing Three.js buffers...",
+            "[MEMORY] Allocation successful (1.2GB)",
+            "[MODULE] React Engine: READY",
+            "[MODULE] Motion Control: READY",
+            "[READY] Deployment environment stable."
+        ];
+
+        function easeOutExpo(t) {
+            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
+
+        function updateCounter(timestamp) {
+            const elapsed = timestamp - startTime;
+            let progress = Math.min(elapsed / minDuration, 0.99);
+            
+            // If page is fully loaded, we can speed up to 100%
+            if (isLoaded && elapsed > 2000) {
+                progress = Math.min(elapsed / minDuration, 1);
             }
 
-            function updateCounter(timestamp) {
-                const elapsed = timestamp - startTime;
-                const progress = Math.min(elapsed / totalDuration, 1);
-                const count = Math.floor(easeInOutQuart(progress) * 100);
-                const pct = 100 - count;
+            const count = Math.floor(easeOutExpo(progress) * 100);
+            const pct = 100 - count;
 
-                // Terminal Glitch Effect
-                if (timestamp - lastTerminalUpdate > 180 && progress < 0.95) {
-                    lastTerminalUpdate = timestamp;
-                    const randomConsole = terminalLogs[Math.floor(Math.random() * terminalLogs.length)];
-                    const randomHex = "0x" + Math.floor(Math.random() * 16777215).toString(16).toUpperCase().padStart(6, '0');
-                    if (terminal) {
-                        terminal.innerHTML += `<div><span style="color:#818cf8">[${randomHex}]</span> ${randomConsole}</div>`;
-                        if (terminal.childElementCount > 4) {
-                            terminal.removeChild(terminal.firstChild);
-                        }
-                    }
+            // Terminal sequence
+            const logIndex = Math.floor(progress * (terminalLogs.length - 1));
+            if (timestamp - lastTerminalUpdate > (350 / (progress + 0.5)) && progress < 0.98) {
+                lastTerminalUpdate = timestamp;
+                if (terminal) {
+                    const randomHex = "0x" + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+                    terminal.innerHTML += `<div style="opacity:0.8; animation: slideUp 0.3s ease-out;"><span style="color:var(--primary); font-weight:800">[${randomHex}]</span> ${terminalLogs[logIndex]}</div>`;
+                    terminal.scrollTop = terminal.scrollHeight;
+                    if (terminal.childElementCount > 5) terminal.removeChild(terminal.firstChild);
+                }
+            }
+
+            counter.textContent = count + '%';
+            counter.setAttribute('data-count', count + '%');
+            counter.style.clipPath = `polygon(0 ${pct}%, 100% ${pct}%, 100% 100%, 0 100%)`;
+            bar.style.width = count + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(updateCounter);
+            } else {
+                counter.textContent = '100%';
+                if (terminal) {
+                    terminal.innerHTML += `<div style="color:#10b981; font-weight:900; margin-top:4px">[READY] SYSTEM ONLINE</div>`;
+                    terminal.scrollTop = terminal.scrollHeight;
                 }
 
-                // Temporary glitch on the counter text
-                if (count > 0 && Math.random() > 0.85 && progress < 1) {
-                    counter.textContent = count + (Math.random() > 0.5 ? '!' : '#');
-                } else {
-                    counter.textContent = count + '%';
-                }
-
-                counter.setAttribute('data-count', count + '%');
-                counter.style.clipPath = `polygon(0 ${pct}%, 100% ${pct}%, 100% 100%, 0 100%)`;
-                bar.style.width = count + '%';
-
-                if (progress < 1) {
-                    requestAnimationFrame(updateCounter);
-                } else {
-                    counter.textContent = '100%';
-                    counter.setAttribute('data-count', '100%');
-                    counter.style.clipPath = 'polygon(0 0%, 100% 0%, 100% 100%, 0 100%)';
-                    bar.style.width = '100%';
-
-                    if (terminal) {
-                        terminal.innerHTML += `<div style="color:#10b981; margin-top: 8px;">[SUCCESS] Architecture deployed. Ready.</div>`;
-                    }
-
+                setTimeout(() => {
+                    preloader.classList.add('slide-up');
+                    document.body.style.overflow = '';
                     setTimeout(() => {
-                        preloader.classList.add('slide-up');
-                        setTimeout(() => {
-                            preloader.style.visibility = 'hidden';
-                            preloader.style.display = 'none';
-                            document.body.style.overflow = '';
-                            initCanvas();
-                        }, 1400);
-                    }, 800);
-                }
+                        preloader.style.display = 'none';
+                        initCanvas();
+                    }, 1200);
+                }, 500);
             }
+        }
 
-            requestAnimationFrame(updateCounter);
-        });
+        requestAnimationFrame(updateCounter);
 
         // ===== TYPEWRITER =====
         const words = ["Front-End Architect", "UI/UX Designer", "React Specialist", "Creative Developer"];
@@ -3302,8 +3773,30 @@
             });
         }
 
-        // ===== SCROLL HANDLER =====
+        // ===== SCROLL HANDLER (OPTIMIZED) =====
         let ticking = false;
+        const progressBar = document.getElementById("progress-bar");
+        const auras = {
+            1: document.querySelector('.aura-1'),
+            2: document.querySelector('.aura-2'),
+            3: document.querySelector('.aura-3')
+        };
+        const scrollTopBtn = document.getElementById('scroll-top');
+        const navbar = document.getElementById('navbar');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('section[id]');
+        
+        // Cache section offsets for faster lookup
+        let sectionOffsets = [];
+        function refreshSectionOffsets() {
+            sectionOffsets = Array.from(sections).map(s => ({
+                id: s.getAttribute('id'),
+                top: s.offsetTop - 300
+            }));
+        }
+        refreshSectionOffsets();
+        window.addEventListener('resize', refreshSectionOffsets, { passive: true });
+
         window.addEventListener('scroll', () => {
             if (!ticking) {
                 requestAnimationFrame(() => {
@@ -3312,53 +3805,62 @@
                 });
                 ticking = true;
             }
-        });
+        }, { passive: true });
 
         function handleScroll() {
-            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const scrolled = (height === 0) ? 0 : (winScroll / height) * 100;
-            document.getElementById("progress-bar").style.width = scrolled + "%";
-
-            const aura1 = document.querySelector('.aura-1');
-            const aura2 = document.querySelector('.aura-2');
-            const aura3 = document.querySelector('.aura-3');
-            if (aura1) aura1.style.transform = 'translateY(' + (winScroll * 0.12) + 'px) rotate(' + (winScroll * 0.01) + 'deg)';
-            if (aura2) aura2.style.transform = 'translateY(' + (winScroll * -0.08) + 'px) rotate(' + (winScroll * -0.01) + 'deg)';
-            if (aura3) aura3.style.transform = 'translateY(' + (winScroll * 0.05) + 'px)';
-
-            const btn = document.getElementById('scroll-top');
-            if (window.scrollY > 500) {
-                btn.classList.add('opacity-100', 'translate-y-0');
-                btn.classList.remove('opacity-0', 'translate-y-20');
-            } else {
-                btn.classList.remove('opacity-100', 'translate-y-0');
-                btn.classList.add('opacity-0', 'translate-y-20');
+            const winScroll = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            
+            // Progress Bar
+            if (progressBar) {
+                const scrolled = (scrollHeight === 0) ? 0 : (winScroll / scrollHeight) * 100;
+                progressBar.style.width = scrolled + "%";
             }
 
-            const nav = document.getElementById('navbar');
-            if (window.scrollY > 80) {
-                nav.classList.add('bg-black/80', 'backdrop-blur-2xl', 'py-4', 'border-b', 'border-white/5', 'shadow-2xl');
-                nav.classList.remove('py-6', 'md:py-8');
+            // Auras (Parallax)
+            if (auras[1]) auras[1].style.transform = `translate3d(0, ${winScroll * 0.12}px, 0) rotate(${winScroll * 0.01}deg)`;
+            if (auras[2]) auras[2].style.transform = `translate3d(0, ${winScroll * -0.08}px, 0) rotate(${winScroll * -0.01}deg)`;
+            if (auras[3]) auras[3].style.transform = `translate3d(0, ${winScroll * 0.05}px, 0)`;
+
+            // Scroll Top Button (Avoid classList overkill)
+            if (winScroll > 500) {
+                if (!scrollTopBtn.classList.contains('opacity-100')) {
+                    scrollTopBtn.classList.replace('opacity-0', 'opacity-100');
+                    scrollTopBtn.classList.replace('translate-y-20', 'translate-y-0');
+                }
             } else {
-                nav.classList.remove('bg-black/80', 'backdrop-blur-2xl', 'py-4', 'border-b', 'border-white/5', 'shadow-2xl');
-                nav.classList.add('py-6', 'md:py-8');
+                if (scrollTopBtn.classList.contains('opacity-100')) {
+                    scrollTopBtn.classList.replace('opacity-100', 'opacity-0');
+                    scrollTopBtn.classList.replace('translate-y-0', 'translate-y-20');
+                }
             }
 
-            const sections = document.querySelectorAll('section[id]');
-            const navLinks = document.querySelectorAll('.nav-link');
+            // Sticky Navbar
+            if (winScroll > 80) {
+                if (!navbar.classList.contains('bg-black/80')) {
+                    navbar.classList.add('bg-black/80', 'backdrop-blur-2xl', 'py-4', 'border-b', 'border-white/5', 'shadow-2xl');
+                    navbar.classList.remove('py-6', 'md:py-8');
+                }
+            } else {
+                if (navbar.classList.contains('bg-black/80')) {
+                    navbar.classList.remove('bg-black/80', 'backdrop-blur-2xl', 'py-4', 'border-b', 'border-white/5', 'shadow-2xl');
+                    navbar.classList.add('py-6', 'md:py-8');
+                }
+            }
+
+            // Active Nav Link (Using Cached Offsets)
             let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop - 200;
-                if (winScroll >= sectionTop) {
-                    current = section.getAttribute('id');
+            for (let i = sectionOffsets.length - 1; i >= 0; i--) {
+                if (winScroll >= sectionOffsets[i].top) {
+                    current = sectionOffsets[i].id;
+                    break;
                 }
-            });
+            }
+            
             navLinks.forEach(link => {
-                link.classList.remove('active', 'text-sky-400');
-                if (link.getAttribute('href') === '#' + current) {
-                    link.classList.add('active', 'text-sky-400');
-                }
+                const isActive = link.getAttribute('href') === '#' + current;
+                link.classList.toggle('active', isActive);
+                link.classList.toggle('text-sky-400', isActive);
             });
         }
 
@@ -3374,55 +3876,98 @@
         window.addEventListener('mousemove', (e) => {
             glowTargetX = e.clientX;
             glowTargetY = e.clientY;
-        });
+        }, { passive: true });
 
         function animateGlow() {
             glowX += (glowTargetX - glowX) * 0.08;
             glowY += (glowTargetY - glowY) * 0.08;
-            glow.style.left = glowX + 'px';
-            glow.style.top = glowY + 'px';
+            // Use transform translate3d for GPU acceleration
+            glow.style.transform = `translate3d(${glowX}px, ${glowY}px, 0)`;
             requestAnimationFrame(animateGlow);
         }
         animateGlow();
 
-        // ===== MAGNETIC EFFECT =====
+        // ===== MAGNETIC EFFECT (OPTIMIZED) =====
         document.querySelectorAll('.magnetic').forEach(el => {
+            let rect = null;
+            el.addEventListener('mouseenter', () => {
+                rect = el.getBoundingClientRect();
+            }, { passive: true });
+
             el.addEventListener('mousemove', (e) => {
-                const rect = el.getBoundingClientRect();
+                if (!rect) return;
                 const x = e.clientX - rect.left - rect.width / 2;
                 const y = e.clientY - rect.top - rect.height / 2;
-                el.style.transform = 'translate(' + (x * 0.25) + 'px, ' + (y * 0.25) + 'px)';
-            });
+                // Use translate3d for GPU acceleration
+                el.style.transform = `translate3d(${x * 0.25}px, ${y * 0.25}px, 0)`;
+            }, { passive: true });
+
             el.addEventListener('mouseleave', () => {
-                el.style.transform = 'translate(0px, 0px)';
-            });
+                el.style.transform = 'translate3d(0, 0, 0)';
+                rect = null;
+            }, { passive: true });
         });
 
-        // ===== 3D TILT FOR PROJECT CARDS =====
+        // ===== 3D TILT FOR PROJECT CARDS (OPTIMIZED) =====
         document.querySelectorAll('.project-card-v2').forEach(card => {
             const inner = card.querySelector('.project-card-inner');
+            let rect = null;
+
+            card.addEventListener('mouseenter', () => {
+                rect = card.getBoundingClientRect();
+                card.style.willChange = 'transform';
+            }, { passive: true });
 
             card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
+                if (!rect) return;
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', x + 'px');
-                card.style.setProperty('--mouse-y', y + 'px');
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
 
                 if (window.matchMedia('(pointer: fine)').matches && inner) {
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
                     const rotateX = (y - centerY) / 30;
                     const rotateY = (centerX - x) / 30;
-                    inner.style.transform = 'rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg)';
+                    inner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
                 }
-            });
+            }, { passive: true });
 
             card.addEventListener('mouseleave', () => {
                 if (inner) {
                     inner.style.transform = 'rotateX(0deg) rotateY(0deg)';
                 }
-            });
+                card.style.willChange = 'auto';
+                rect = null;
+            }, { passive: true });
+        });
+
+        // ===== 3D TILT FOR TESTIMONIAL CARDS (OPTIMIZED) =====
+        document.querySelectorAll('.testi-card').forEach(card => {
+            let rect = null;
+
+            card.addEventListener('mouseenter', () => {
+                rect = card.getBoundingClientRect();
+                card.style.willChange = 'transform';
+            }, { passive: true });
+
+            card.addEventListener('mousemove', (e) => {
+                if (!rect || !window.matchMedia('(pointer: fine)').matches) return;
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 30;
+                const rotateY = (centerX - x) / 30;
+                card.style.transform = `translate3d(0, -8px, 0) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            }, { passive: true });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg)';
+                card.style.willChange = 'auto';
+                rect = null;
+            }, { passive: true });
         });
 
         // ===== COPY EMAIL =====
@@ -3469,8 +4014,10 @@
             update() {
                 const dx = this.x - mouseCanvasX;
                 const dy = this.y - mouseCanvasY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 150) {
+                const distSq = dx * dx + dy * dy;
+                // Performance: Using squared distance to avoid Math.sqrt
+                if (distSq < 22500) { // 150^2
+                    const dist = Math.sqrt(distSq);
                     const force = (150 - dist) / 150;
                     this.x += (dx / dist) * force * 1.5;
                     this.y += (dy / dist) * force * 1.5;
@@ -3500,14 +4047,18 @@
         function animate() {
             ctx.clearRect(0, 0, width, height);
             particles.forEach(p => { p.update(); p.draw(); });
+            const connDistSq = connectionDistance * connectionDistance;
+            
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i + 1; j < particles.length; j++) {
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < connectionDistance) {
+                    const distSq = dx * dx + dy * dy;
+                    
+                    if (distSq < connDistSq) {
+                        const dist = Math.sqrt(distSq);
                         ctx.beginPath();
-                        ctx.strokeStyle = 'rgba(56, 189, 248, ' + ((1 - dist / connectionDistance) * 0.08) + ')';
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${(1 - dist / connectionDistance) * 0.08})`;
                         ctx.lineWidth = 0.5;
                         ctx.moveTo(particles[i].x, particles[i].y);
                         ctx.lineTo(particles[j].x, particles[j].y);
@@ -3567,12 +4118,20 @@
         }
 
         // ===== INTERSECTION OBSERVER =====
-        const observerOptions = { threshold: 0.1, rootMargin: "0px 0px -60px 0px" };
+        const observerOptions = { threshold: 0.1, rootMargin: "0px 0px -100px 0px" };
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('active');
-                    if (entry.target.closest('#about')) {
+                    
+                    // Stagger children if any
+                    const children = entry.target.querySelectorAll('.stagger-item, .glass-card, .tech-tag');
+                    children.forEach((child, i) => {
+                        child.style.transitionDelay = `${i * 100}ms`;
+                        child.classList.add('visible');
+                    });
+
+                    if (entry.target.id === 'about' || entry.target.closest('#about')) {
                         animateCounters();
                     }
                 }
@@ -3581,22 +4140,14 @@
 
         document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale, .reveal-text').forEach(el => observer.observe(el));
 
-        // ===== STAGGER-ITEM DIRECT OBSERVER (for tech stack deep-nested items) =====
-        const staggerObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    staggerObserver.unobserve(entry.target);
-                }
+        // Parallax Logic
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY;
+            document.querySelectorAll('.parallax').forEach(el => {
+                const speed = el.getAttribute('data-speed') || 10;
+                const yPos = -(scrolled * speed / 100);
+                el.style.transform = `translateY(${yPos}px)`;
             });
-        }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
-
-        document.querySelectorAll('.stagger-item').forEach((el, i) => {
-            // Only use direct observer for items not inside a direct .reveal parent
-            const parentReveal = el.closest('.reveal, .reveal-left, .reveal-right');
-            if (!parentReveal || el.closest(parentReveal) !== el.parentElement.closest('.reveal, .reveal-left, .reveal-right')) {
-                staggerObserver.observe(el);
-            }
         });
 
         // ===== MOBILE MENU =====
@@ -3747,16 +4298,7 @@
             if (e.key === 'Escape' && certOpen) toggleCertModal(false);
         });
 
-        // ===== STATUS WIDGET CLOCK =====
-        function updateClock() {
-            const now = new Date();
-            const options = { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true };
-            const timeStr = new Intl.DateTimeFormat('en-IN', options).format(now);
-            const el = document.getElementById('local-time');
-            if (el) el.textContent = timeStr;
-        }
-        updateClock();
-        setInterval(updateClock, 30000);
+
 
         // ===== HUE SLIDER (CHROMA SHIFT ENGINE) =====
         const hueSlider = document.getElementById('hue-slider');
@@ -3913,62 +4455,140 @@
 
 
 
-        // ===== SPOTLIGHT DARK MODE REVEAL =====
-        const spotlightCanvas = document.getElementById('spotlight-canvas');
-        const spotlightSection = document.getElementById('spotlight-section');
-        const spotlightIcons = document.getElementById('spotlight-icons');
+        // ===== SPOTLIGHT DIGITAL SCANNER REVEAL =====
+        (function() {
+            const spotlightCanvas = document.getElementById('spotlight-canvas');
+            const spotlightSection = document.getElementById('spotlight-section');
+            const scannerUI = document.getElementById('scanner-ui');
+            const spotlightIcons = document.getElementById('spotlight-icons');
 
-        const techStackIcons = [
-            { name: 'React', emoji: '⚛️' }, { name: 'Next.js', emoji: '▲' }, { name: 'Angular', emoji: '🔴' },
-            { name: 'TypeScript', emoji: '📘' }, { name: 'Node.js', emoji: '🟢' }, { name: 'MongoDB', emoji: '🍃' },
-            { name: 'Tailwind', emoji: '💨' }, { name: 'Ionic', emoji: '📱' }, { name: 'Firebase', emoji: '🔥' },
-            { name: 'MySQL', emoji: '🐬' }, { name: 'PHP', emoji: '🐘' }, { name: 'Git', emoji: '🌿' }
-        ];
+            const techStackIcons = [
+                { name: 'React', emoji: '⚛️' }, { name: 'Next.js', emoji: '▲' }, { name: 'Angular', emoji: '🔴' },
+                { name: 'TypeScript', emoji: '📘' }, { name: 'Node.js', emoji: '🟢' }, { name: 'MongoDB', emoji: '🍃' },
+                { name: 'Tailwind', emoji: '💨' }, { name: 'Ionic', emoji: '📱' }, { name: 'Firebase', emoji: '🔥' },
+                { name: 'MySQL', emoji: '🐬' }, { name: 'PHP', emoji: '🐘' }, { name: 'Git', emoji: '🌿' },
+                { name: 'Python', emoji: '🐍' }, { name: 'Docker', emoji: '🐋' }, { name: 'AWS', emoji: '☁️' }, { name: 'Three.js', emoji: '🧊' }
+            ];
 
-        spotlightIcons.innerHTML = techStackIcons.map(t => `
-            <div class="spotlight-icon">
-                <div style="font-size:2.5rem">${t.emoji}</div>
-                <span>${t.name}</span>
-            </div>`).join('');
+            if (spotlightIcons) {
+                spotlightIcons.innerHTML = techStackIcons.map(t => `
+                    <div class="spotlight-icon">
+                        <div class="testi-avatar-glow from-sky-500/20" style="opacity:0.4;inset:-15px"></div>
+                        <div style="font-size:2.8rem;filter:drop-shadow(0 0 10px rgba(56,189,248,0.2))">${t.emoji}</div>
+                        <span>${t.name}</span>
+                    </div>`).join('');
+            }
 
-        let spotX = -500, spotY = -500;
-        function resizeSpotlight() {
-            spotlightCanvas.width = spotlightSection.offsetWidth;
-            spotlightCanvas.height = spotlightSection.offsetHeight;
-        }
-        resizeSpotlight();
-        window.addEventListener('resize', resizeSpotlight);
+            let spotX = -500, spotY = -500;
+            let iconCache = [];
+            let spotlightRect = null;
+            let particles = [];
 
-        spotlightSection.addEventListener('mousemove', (e) => {
-            const rect = spotlightSection.getBoundingClientRect();
-            spotX = e.clientX - rect.left;
-            spotY = e.clientY - rect.top;
-        });
-        spotlightSection.addEventListener('mouseleave', () => { spotX = -500; spotY = -500; });
+            class Dust {
+                constructor() { this.reset(); }
+                reset() {
+                    this.x = Math.random() * (spotlightCanvas?.width || 1000);
+                    this.y = Math.random() * (spotlightCanvas?.height || 600);
+                    this.size = Math.random() * 2;
+                    this.vx = (Math.random() - 0.5) * 0.4;
+                    this.vy = (Math.random() - 0.5) * 0.4;
+                    this.alpha = Math.random() * 0.5;
+                }
+                update() {
+                    this.x += this.vx; this.y += this.vy;
+                    if (this.x < 0 || this.x > spotlightCanvas.width || this.y < 0 || this.y > spotlightCanvas.height) this.reset();
+                }
+            }
 
-        function drawSpotlight() {
-            const sctx = spotlightCanvas.getContext('2d');
-            sctx.clearRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
-            const gradient = sctx.createRadialGradient(spotX, spotY, 0, spotX, spotY, 160);
-            gradient.addColorStop(0, 'rgba(0,0,0,0)');
-            gradient.addColorStop(1, 'rgba(0,0,0,0.96)');
-            sctx.fillStyle = gradient;
-            sctx.fillRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
+            function refreshSpotlightCache() {
+                if (!spotlightSection || !spotlightCanvas) return;
+                spotlightRect = spotlightSection.getBoundingClientRect();
+                spotlightCanvas.width = spotlightSection.offsetWidth;
+                spotlightCanvas.height = spotlightSection.offsetHeight;
+                
+                const icons = document.querySelectorAll('.spotlight-icon');
+                iconCache = Array.from(icons).map(icon => {
+                    const rect = icon.getBoundingClientRect();
+                    return {
+                        el: icon,
+                        cx: rect.left - spotlightRect.left + rect.width / 2,
+                        cy: rect.top - spotlightRect.top + rect.height / 2,
+                        driftX: 0, driftY: 0
+                    };
+                });
+                
+                particles = Array.from({ length: 80 }, () => new Dust());
+            }
+            
+            refreshSpotlightCache();
+            window.addEventListener('resize', refreshSpotlightCache, { passive: true });
 
-            // Reveal icons near cursor
-            document.querySelectorAll('.spotlight-icon').forEach(icon => {
-                const rect2 = icon.getBoundingClientRect();
-                const secRect = spotlightSection.getBoundingClientRect();
-                const cx = rect2.left - secRect.left + rect2.width / 2;
-                const cy = rect2.top - secRect.top + rect2.height / 2;
-                const dist = Math.hypot(cx - spotX, cy - spotY);
-                const reveal = Math.max(0, 1 - dist / 160);
-                icon.style.opacity = reveal;
-                icon.style.transform = `scale(${0.8 + reveal * 0.3})`;
+            spotlightSection.addEventListener('mousemove', (e) => {
+                if (!spotlightRect) return;
+                spotX = e.clientX - spotlightRect.left;
+                spotY = e.clientY - spotlightRect.top;
+                
+                if (scannerUI) {
+                    scannerUI.style.opacity = '1';
+                    scannerUI.style.transform = `translate3d(${e.clientX - 100}px, ${e.clientY - 100}px, 0)`;
+                }
+            }, { passive: true });
+            
+            spotlightSection.addEventListener('mouseleave', () => { 
+                spotX = -500; spotY = -500; 
+                if (scannerUI) scannerUI.style.opacity = '0';
             });
-            requestAnimationFrame(drawSpotlight);
-        }
-        drawSpotlight();
+
+            function drawSpotlight() {
+                const sctx = spotlightCanvas.getContext('2d');
+                sctx.clearRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
+                
+                // Dust particles
+                particles.forEach(p => {
+                    p.update();
+                    const dist = Math.hypot(p.x - spotX, p.y - spotY);
+                    if (dist < 200) {
+                        sctx.fillStyle = `rgba(56, 189, 248, ${p.alpha * (1 - dist/200)})`;
+                        sctx.beginPath(); sctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); sctx.fill();
+                    }
+                });
+
+                if (spotX > -100) {
+                    const gradient = sctx.createRadialGradient(spotX, spotY, 0, spotX, spotY, 200);
+                    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                    gradient.addColorStop(0.5, 'rgba(0,0,0,0.3)');
+                    gradient.addColorStop(1, 'rgba(2,2,4,0.98)');
+                    sctx.fillStyle = gradient;
+                    sctx.fillRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
+
+                    // Scanline edge
+                    sctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+                    sctx.lineWidth = 1;
+                    sctx.beginPath(); sctx.arc(spotX, spotY, 140, 0, Math.PI * 2); sctx.stroke();
+
+                    iconCache.forEach(icon => {
+                        const dx = icon.cx - spotX;
+                        const dy = icon.cy - spotY;
+                        const dist = Math.hypot(dx, dy);
+                        const reveal = Math.max(0, 1 - dist / 180);
+                        
+                        if (reveal > 0 || parseFloat(icon.el.style.opacity) > 0) {
+                            icon.el.style.opacity = reveal;
+                            // Magnetic float
+                            const drag = reveal * 12;
+                            icon.driftX += ((dx / dist || 0) * drag - icon.driftX) * 0.15;
+                            icon.driftY += ((dy / dist || 0) * drag - icon.driftY) * 0.15;
+                            icon.el.style.transform = `translate3d(${-icon.driftX}px, ${-icon.driftY}px, 0) scale3d(${0.85 + reveal * 0.15}, ${0.85 + reveal * 0.15}, 1)`;
+                        }
+                    });
+                } else {
+                    sctx.fillStyle = '#020204';
+                    sctx.fillRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
+                }
+                requestAnimationFrame(drawSpotlight);
+            }
+            drawSpotlight();
+        })();
 
 
         // ===== THREE.JS FLOATING HERO OBJECT =====
@@ -4032,6 +4652,54 @@
             });
         })();
 
+        // ===== TESTIMONIAL CAROUSEL LOGIC =====
+        (function() {
+            const testiContainer = document.querySelector('#testimonial-section .marquee-container');
+            const prevTesti = document.getElementById('prev-testi');
+            const nextTesti = document.getElementById('next-testi');
+            const testiCurrent = document.getElementById('testi-current');
+            const testiProgress = document.getElementById('testi-progress');
+
+            if (testiContainer && prevTesti && nextTesti) {
+                const updateTestiUI = () => {
+                    const scrollLeft = testiContainer.scrollLeft;
+                    const containerWidth = testiContainer.clientWidth;
+                    const maxScroll = testiContainer.scrollWidth - containerWidth;
+                    
+                    const testiCards = testiContainer.querySelectorAll('.testi-card');
+                    if (testiCards.length === 0) return;
+
+                    const cardWidth = testiCards[0].offsetWidth + 32;
+                    const currentIndex = Math.min(testiCards.length - 1, Math.round(scrollLeft / cardWidth));
+                    
+                    if(testiCurrent) testiCurrent.textContent = (currentIndex + 1).toString().padStart(2, '0');
+                    if(testiProgress) {
+                        const progress = maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0;
+                        testiProgress.style.width = `${Math.max(15, progress)}%`;
+                    }
+                };
+
+                nextTesti.addEventListener('click', () => {
+                    const card = testiContainer.querySelector('.testi-card');
+                    if (card) {
+                        const amount = card.offsetWidth + 32;
+                        testiContainer.scrollBy({ left: amount, behavior: 'smooth' });
+                    }
+                });
+
+                prevTesti.addEventListener('click', () => {
+                    const card = testiContainer.querySelector('.testi-card');
+                    if (card) {
+                        const amount = card.offsetWidth + 32;
+                        testiContainer.scrollBy({ left: -amount, behavior: 'smooth' });
+                    }
+                });
+
+                testiContainer.addEventListener('scroll', updateTestiUI, { passive: true });
+                window.addEventListener('resize', updateTestiUI, { passive: true });
+                updateTestiUI();
+            }
+        })();
     </script>
 </body>
 
