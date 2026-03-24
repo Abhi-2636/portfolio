@@ -3737,16 +3737,20 @@
 
 
         // ===== ADVANCED PRELOADER & COUNTER =====
-        let isLoaded = false;
+        let isLoaded = document.readyState === 'complete';
         window.addEventListener('load', () => { isLoaded = true; });
+        window.addEventListener('DOMContentLoaded', () => { 
+            setTimeout(() => { isLoaded = true; }, 3000); // Failsafe DOM ready
+        });
 
         const preloader = document.getElementById('preloader');
         const counter = document.getElementById('loader-count');
         const bar = document.getElementById('loader-bar');
         const terminal = document.getElementById('terminal-loader');
-        const logo = document.querySelector('.loader-logo');
         
+        // Force overflow hidden initially
         document.body.style.overflow = 'hidden';
+
 
         const minDuration = 3200; 
         const startTime = performance.now();
@@ -3806,13 +3810,18 @@
                 }
 
                 setTimeout(() => {
-                    preloader.classList.add('slide-up');
+                    preloader.style.transition = 'opacity 0.8s ease-out, transform 1s cubic-bezier(0.16, 1, 0.3, 1)';
+                    preloader.style.opacity = '0';
+                    preloader.style.transform = 'translateY(-100%)';
+                    preloader.style.pointerEvents = 'none';
                     document.body.style.overflow = '';
+                    
+                    // Final cleanup
                     setTimeout(() => {
-                        preloader.style.display = 'none';
+                        if (preloader) preloader.style.display = 'none';
                         initCanvas();
-                    }, 1200);
-                }, 500);
+                    }, 1000);
+                }, 400);
             }
         }
 
