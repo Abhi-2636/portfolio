@@ -134,7 +134,10 @@
 
         @keyframes scanline {
             0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
+            100% { transform: translateY(100vh); }
+        }
+        .animate-scanline {
+            animation: scanline 6s linear infinite;
         }
 
         @keyframes glitch-anim {
@@ -656,21 +659,43 @@
         }
 
         .hamburger-line {
-            transition: transform 0.4s cubic-bezier(0.68, -0.6, 0.32, 1.6), opacity 0.2s ease-in-out;
+            transition: transform 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6), opacity 0.3s ease, background 0.3s ease;
             transform-origin: center;
+            border-radius: 2px;
         }
 
         .menu-open .line-1 {
-            transform: translateY(7px) rotate(45deg);
+            transform: translateY(8px) rotate(45deg);
+            background: #38bdf8 !important;
         }
 
         .menu-open .line-2 {
             opacity: 0;
-            transform: translateX(-10px);
+            transform: scaleX(0);
         }
 
         .menu-open .line-3 {
-            transform: translateY(-7px) rotate(-45deg);
+            transform: translateY(-8px) rotate(-45deg);
+            background: #38bdf8 !important;
+        }
+
+        #menu-btn {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        #menu-btn.menu-open {
+            border-color: rgba(56, 189, 248, 0.4) !important;
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+        }
+
+
+
+        .mobile-nav-link {
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease, color 0.3s ease, letter-spacing 0.3s ease;
+        }
+
+        .mobile-nav-item {
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
         }
 
 
@@ -2127,44 +2152,71 @@
 
 
 
-            <button id="menu-btn"
-                class="lg:hidden glass-card p-3.5 rounded-xl w-12 h-12 flex flex-col items-center justify-center gap-1.5 border-white/10 z-[250] overflow-hidden active:scale-95 transition-transform">
-                <div class="w-5 h-0.5 bg-white hamburger-line line-1"></div>
-                <div class="w-5 h-0.5 bg-white opacity-50 hamburger-line line-2"></div>
-                <div class="w-5 h-0.5 bg-white hamburger-line line-3"></div>
+            <button id="menu-btn" aria-label="Toggle menu"
+                class="lg:hidden p-3 rounded-2xl w-12 h-12 flex flex-col items-center justify-center gap-[6px] z-[500] relative"
+                style="background:rgba(10,10,15,0.6); border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(20px);">
+                <div class="w-6 h-[2px] bg-white rounded-full hamburger-line line-1"></div>
+                <div class="w-4 h-[2px] bg-white/60 rounded-full hamburger-line line-2 self-end"></div>
+                <div class="w-6 h-[2px] bg-white rounded-full hamburger-line line-3"></div>
             </button>
         </div>
     </nav>
 
-    <!-- Mobile Menu Fullscreen Overlay -->
-    <div id="mobile-menu"
-        class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[300] flex flex-col items-center justify-center gap-6 sm:gap-8"
-        style="opacity:0; pointer-events:none; clip-path: circle(0px at calc(100% - 40px) 40px); transition: clip-path 0.8s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.4s ease;">
-        <div
-            class="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-transparent to-purple-500/10 pointer-events-none">
+    <!-- ===== MOBILE MENU OVERLAY ===== -->
+    <div id="mobile-menu" class="fixed inset-0 z-[400] flex flex-col bg-[#030308]"
+        style="visibility:hidden; pointer-events:none; clip-path:circle(0% at calc(100% - 40px) 40px);">
+
+        <!-- Scan line -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="w-full h-[1px] bg-gradient-to-r from-transparent via-sky-500/40 to-transparent absolute animate-scanline"></div>
         </div>
-        <div class="flex flex-col items-center gap-6 w-full px-8 relative z-10" id="mobile-menu-links">
-            <a href="#about"
-                class="mobile-nav-link text-4xl sm:text-5xl font-display font-black uppercase tracking-tight text-white/70 hover:text-sky-400 transition-all duration-500 w-full text-center py-2"
-                style="transform:translateY(16px);opacity:0;">Foundation</a>
-            <a href="#expertise"
-                class="mobile-nav-link text-4xl sm:text-5xl font-display font-black uppercase tracking-tight text-white/70 hover:text-sky-400 transition-all duration-500 w-full text-center py-2"
-                style="transform:translateY(16px);opacity:0;">Systems</a>
-            <a href="#education"
-                class="mobile-nav-link text-4xl sm:text-5xl font-display font-black uppercase tracking-tight text-white/70 hover:text-sky-400 transition-all duration-500 w-full text-center py-2"
-                style="transform:translateY(16px);opacity:0;">Academic</a>
-            <a href="#projects"
-                class="mobile-nav-link text-4xl sm:text-5xl font-display font-black uppercase tracking-tight text-white/70 hover:text-sky-400 transition-all duration-500 w-full text-center py-2"
-                style="transform:translateY(16px);opacity:0;">Blueprints</a>
-            <div class="w-12 h-1 bg-white/10 rounded-full my-4 mobile-nav-link transition-all duration-500"
-                style="transform:translateY(16px);opacity:0;"></div>
-            <a href="https://drive.google.com/file/d/1lYPG1vQRWvBPzbi1dpfhYhXMkLhu58_0/view" target="_blank"
-                rel="noopener noreferrer"
-                class="mobile-nav-link text-xl sm:text-2xl font-display font-black uppercase tracking-widest text-sky-400 hover:text-white transition-all duration-500 w-full text-center py-2"
-                style="transform:translateY(16px);opacity:0;">Resume ↗</a>
+
+        <!-- Content -->
+        <div class="relative flex flex-col items-center justify-center flex-1 w-full px-6 sm:px-10">
+
+            <!-- Label -->
+            <div class="mobile-nav-item mb-8 flex items-center gap-3" style="opacity:0; transform:translateY(20px);">
+                <span class="w-6 h-[1px] bg-sky-500/40"></span>
+                <span class="text-[10px] font-black uppercase tracking-[0.4em] text-sky-400/70">Menu</span>
+                <span class="w-6 h-[1px] bg-sky-500/40"></span>
+            </div>
+
+            <!-- Nav links -->
+            <nav class="flex flex-col items-center gap-0 w-full max-w-md">
+                <a href="#about" class="mobile-nav-link group flex items-center justify-center gap-4 w-full py-4" style="opacity:0; transform:translateY(24px);">
+                    <span class="text-[10px] font-black text-white/30 group-hover:text-sky-500/60 transition-colors duration-300 tabular-nums">01</span>
+                    <span class="text-[clamp(1.8rem,9vw,3rem)] font-display font-black uppercase tracking-tight text-white/50 group-hover:text-white group-hover:tracking-normal transition-all duration-500">Foundation</span>
+                </a>
+                <a href="#expertise" class="mobile-nav-link group flex items-center justify-center gap-4 w-full py-4" style="opacity:0; transform:translateY(24px);">
+                    <span class="text-[10px] font-black text-white/30 group-hover:text-sky-500/60 transition-colors duration-300 tabular-nums">02</span>
+                    <span class="text-[clamp(1.8rem,9vw,3rem)] font-display font-black uppercase tracking-tight text-white/50 group-hover:text-white group-hover:tracking-normal transition-all duration-500">Systems</span>
+                </a>
+                <a href="#education" class="mobile-nav-link group flex items-center justify-center gap-4 w-full py-4" style="opacity:0; transform:translateY(24px);">
+                    <span class="text-[10px] font-black text-white/30 group-hover:text-sky-500/60 transition-colors duration-300 tabular-nums">03</span>
+                    <span class="text-[clamp(1.8rem,9vw,3rem)] font-display font-black uppercase tracking-tight text-white/50 group-hover:text-white group-hover:tracking-normal transition-all duration-500">Academic</span>
+                </a>
+                <a href="#projects" class="mobile-nav-link group flex items-center justify-center gap-4 w-full py-4" style="opacity:0; transform:translateY(24px);">
+                    <span class="text-[10px] font-black text-white/30 group-hover:text-sky-500/60 transition-colors duration-300 tabular-nums">04</span>
+                    <span class="text-[clamp(1.8rem,9vw,3rem)] font-display font-black uppercase tracking-tight text-white/50 group-hover:text-white group-hover:tracking-normal transition-all duration-500">Blueprints</span>
+                </a>
+            </nav>
+
+            <!-- Resume -->
+            <div class="mobile-nav-item mt-8 flex flex-col items-center gap-6" style="opacity:0; transform:translateY(20px);">
+                <div class="w-10 h-[1px] bg-white/10"></div>
+                <a href="https://drive.google.com/file/d/1lYPG1vQRWvBPzbi1dpfhYhXMkLhu58_0/view" target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm font-black uppercase tracking-[0.25em] text-sky-400 hover:text-white transition-colors duration-300">Resume ↗</a>
+            </div>
+        </div>
+
+        <!-- Bottom CTA -->
+        <div class="relative w-full px-8 pb-10 sm:pb-14 flex justify-center mobile-nav-item" style="opacity:0; transform:translateY(20px);">
             <a href="#contact"
-                class="mobile-nav-link w-full max-w-xs text-center py-5 bg-sky-500 text-white rounded-2xl font-black uppercase text-sm tracking-widest mt-4 hover:bg-sky-400 transition-all active:scale-95 shadow-[0_0_40px_rgba(56,189,248,0.3)]"
-                style="transform:translateY(16px);opacity:0;">Get in Touch</a>
+                class="w-full max-w-xs text-center py-5 bg-white text-[#030308] rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-sky-500 hover:text-white transition-all duration-400 active:scale-[0.97] shadow-[0_8px_40px_rgba(0,0,0,0.5)] flex items-center justify-center gap-3">
+                <span class="w-[6px] h-[6px] rounded-full bg-emerald-500 animate-pulse"></span>
+                Get in Touch
+            </a>
         </div>
     </div>
 
@@ -4153,41 +4205,50 @@
         // ===== MOBILE MENU =====
         const menuBtn = document.getElementById('menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
-        const mobileOverlay = document.getElementById('mobile-overlay');
         let isOpen = false;
+        let _menuTimers = [];
 
         function toggleMenu(open) {
+            _menuTimers.forEach(clearTimeout);
+            _menuTimers = [];
             isOpen = open;
-            const links = document.querySelectorAll('.mobile-nav-link');
+
+            const navLinks = mobileMenu.querySelectorAll('.mobile-nav-link');
+            const navItems = mobileMenu.querySelectorAll('.mobile-nav-item');
+            const allEls = [...navLinks, ...navItems];
+
             if (isOpen) {
                 menuBtn.classList.add('menu-open');
                 document.body.style.overflow = 'hidden';
+
+                mobileMenu.style.visibility = 'visible';
                 mobileMenu.style.pointerEvents = 'auto';
-                mobileMenu.style.opacity = '1';
+                mobileMenu.style.transition = 'clip-path 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
                 mobileMenu.style.clipPath = 'circle(150% at calc(100% - 40px) 40px)';
 
-                // Staggered link reveal
-                links.forEach((link, idx) => {
-                    setTimeout(() => {
-                        link.style.transform = 'translateY(0)';
-                        link.style.opacity = '1';
-                    }, 300 + (idx * 50));
+                allEls.forEach((el, i) => {
+                    const t = setTimeout(() => {
+                        el.style.transform = 'translateY(0)';
+                        el.style.opacity = '1';
+                    }, 200 + i * 60);
+                    _menuTimers.push(t);
                 });
             } else {
                 menuBtn.classList.remove('menu-open');
                 document.body.style.overflow = '';
                 mobileMenu.style.pointerEvents = 'none';
-                mobileMenu.style.clipPath = 'circle(0px at calc(100% - 40px) 40px)';
+                mobileMenu.style.transition = 'clip-path 0.6s cubic-bezier(0.77, 0, 0.175, 1)';
+                mobileMenu.style.clipPath = 'circle(0% at calc(100% - 40px) 40px)';
 
-                setTimeout(() => {
-                    mobileMenu.style.opacity = '0';
-                }, 400);
-
-                // Reset for next open
-                links.forEach((link) => {
-                    link.style.transform = 'translateY(16px)';
-                    link.style.opacity = '0';
+                allEls.forEach(el => {
+                    el.style.transform = 'translateY(20px)';
+                    el.style.opacity = '0';
                 });
+
+                const t = setTimeout(() => {
+                    mobileMenu.style.visibility = 'hidden';
+                }, 650);
+                _menuTimers.push(t);
             }
         }
 
@@ -4196,22 +4257,16 @@
             toggleMenu(!isOpen);
         });
 
-        mobileOverlay.addEventListener('click', () => toggleMenu(false));
-
         mobileMenu.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                toggleMenu(false);
-            });
+            link.addEventListener('click', () => toggleMenu(false));
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && isOpen) toggleMenu(false);
         });
 
-        document.addEventListener('click', (e) => {
-            if (isOpen && !mobileMenu.contains(e.target) && !menuBtn.contains(e.target)) {
-                toggleMenu(false);
-            }
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024 && isOpen) toggleMenu(false);
         });
 
         // ===== SMOOTH ANCHOR SCROLL =====
