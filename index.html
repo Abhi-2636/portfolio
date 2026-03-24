@@ -306,13 +306,15 @@
 
         .cursor-trail {
             position: fixed;
+            top: 0;
+            left: 0;
             width: 6px;
             height: 6px;
             background: rgba(56, 189, 248, 0.3);
             border-radius: 50%;
             pointer-events: none;
             z-index: 9998;
-            transition: opacity 0.5s, transform 0.5s;
+            transition: opacity 0.5s;
         }
 
         #cursor-glow {
@@ -3892,8 +3894,10 @@
         const cursorGlow = document.getElementById('cursor-glow');
         let cursorX = 0, cursorY = 0;
         let targetX = 0, targetY = 0;
+        let velX = 0, velY = 0;
         let isMoving = false;
         let moveTimer;
+
 
         // Initialize trails
         const trailCount = 8; // Fewer trails for cleaner look
@@ -3919,23 +3923,39 @@
         });
 
         function animateCursor() {
-            const ease = 0.2; // Faster, snappier ease
-            cursorX += (targetX - cursorX) * ease;
-            cursorY += (targetY - cursorY) * ease;
-
-            cursor.style.transform = `translate(${cursorX}px, ${cursorY}px) translate(-50%, -50%)`;
+            const ease = 0.15;
+            const dx = targetX - cursorX;
+            const dy = targetY - cursorY;
+            
+            cursorX += dx * ease;
+            cursorY += dy * ease;
+            
+            // Velocity for elastic effect
+            velX = dx * 0.1;
+            velY = dy * 0.1;
+            
+            const speed = Math.min(Math.sqrt(dx*dx + dy*dy) * 0.1, 80);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            // Elastic scale based on speed
+            const scaleX = 1 + (speed / 100);
+            const scaleY = 1 - (speed / 150);
+            
+            cursor.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%) rotate(${angle}deg) scale(${scaleX}, ${scaleY})`;
+            
+            if (cursorGlow) {
+                cursorGlow.style.transform = `translate3d(${cursorX - 400}px, ${cursorY - 400}px, 0)`;
+            }
 
             // Trail logic
             let prevX = cursorX;
             let prevY = cursorY;
             trails.forEach((trail, index) => {
-                const trailEase = 0.15 + (index * 0.05);
+                const trailEase = 0.1 + (index * 0.02);
                 trail.x += (prevX - trail.x) * trailEase;
                 trail.y += (prevY - trail.y) * trailEase;
-                trail.el.style.left = trail.x + 'px';
-                trail.el.style.top = trail.y + 'px';
-                trail.el.style.opacity = (1 - (index / trailCount)) * 0.5;
-                trail.el.style.transform = `translate(-50%, -50%) scale(${1 - (index / trailCount)})`;
+                trail.el.style.transform = `translate3d(${trail.x}px, ${trail.y}px, 0) translate(-50%, -50%) scale(${1 - (index / trailCount)})`;
+                trail.el.style.opacity = (1 - (index / trailCount)) * 0.4;
                 prevX = trail.x;
                 prevY = trail.y;
             });
@@ -3943,6 +3963,33 @@
             requestAnimationFrame(animateCursor);
         }
         animateCursor();
+
+        // ===== MATRIX DECIPHER EFFECT =====
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*";
+        function decipher(el) {
+            const originalText = el.innerText;
+            let iteration = 0;
+            let interval = setInterval(() => {
+                el.innerText = originalText.split("").map((letter, index) => {
+                    if(index < iteration) return originalText[index];
+                    return letters[Math.floor(Math.random() * 26)];
+                }).join("");
+                
+                if(iteration >= originalText.length) clearInterval(interval);
+                iteration += 1 / 3;
+            }, 30);
+        }
+
+        // Apply on load to hero
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.hero-title span span, .section-badge').forEach(el => decipher(el));
+        });
+
+        // Apply on hover
+        document.querySelectorAll('h2, .section-badge, .nav-text').forEach(el => {
+            el.addEventListener('mouseenter', () => decipher(el));
+        });
+
 
         // Magnetic Effect
         const magneticElements = document.querySelectorAll('.magnetic');
@@ -4285,24 +4332,8 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        // ===== CURSOR GLOW =====
-        const glow = document.getElementById('cursor-glow');
-        let glowX = 0, glowY = 0;
-        let glowTargetX = 0, glowTargetY = 0;
+        // Consolidated cursor glow moved to animateCursor for perf
 
-        window.addEventListener('mousemove', (e) => {
-            glowTargetX = e.clientX;
-            glowTargetY = e.clientY;
-        }, { passive: true });
-
-        function animateGlow() {
-            glowX += (glowTargetX - glowX) * 0.08;
-            glowY += (glowTargetY - glowY) * 0.08;
-            // Use transform translate3d for GPU acceleration
-            glow.style.transform = `translate3d(${glowX}px, ${glowY}px, 0)`;
-            requestAnimationFrame(animateGlow);
-        }
-        animateGlow();
 
         // ===== MAGNETIC EFFECT (OPTIMIZED) =====
         document.querySelectorAll('.magnetic').forEach(el => {
@@ -4345,9 +4376,15 @@
                 if (window.matchMedia('(pointer: fine)').matches && inner) {
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
-                    const rotateX = (y - centerY) / 30;
-                    const rotateY = (centerX - x) / 30;
+                    const rotateX = (y - centerY) / 25;
+                    const rotateY = (centerX - x) / 25;
                     inner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                    
+                    // Holographic Parallax for inner items
+                    const img = card.querySelector('img');
+                    const tags = card.querySelector('.flex.flex-wrap');
+                    if(img) img.style.transform = `translate3d(${(x - centerX) / 15}px, ${(y - centerY) / 15}px, 0) scale(1.1)`;
+                    if(tags) tags.style.transform = `translate3d(${(centerX - x) / 20}px, ${(centerY - y) / 20}px, 30px)`;
                 }
             }, { passive: true });
 
@@ -4355,6 +4392,11 @@
                 if (inner) {
                     inner.style.transform = 'rotateX(0deg) rotateY(0deg)';
                 }
+                const img = card.querySelector('img');
+                const tags = card.querySelector('.flex.flex-wrap');
+                if(img) img.style.transform = 'translate3d(0, 0, 0) scale(1)';
+                if(tags) tags.style.transform = 'translate3d(0, 0, 0)';
+
                 card.style.willChange = 'auto';
                 rect = null;
             }, { passive: true });
